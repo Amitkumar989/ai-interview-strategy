@@ -17,17 +17,15 @@ export const useInterview = () => {
 
     const generateReport = async ({ jobDescription, selfDescription, resumeFile }) => {
         setLoading(true)
-        let response = null
         try {
-            response = await generateInterviewReport({ jobDescription, selfDescription, resumeFile })
+            const response = await generateInterviewReport({ jobDescription, selfDescription, resumeFile })
             setReport(response.interviewReport)
+            return response.interviewReport
         } catch (error) {
-            console.log(error)
+            throw error instanceof Error ? error : new Error(error?.message || "Failed to generate interview strategy")
         } finally {
             setLoading(false)
         }
-
-        return response.interviewReport
     }
 
     const getReportById = async (interviewId) => {
@@ -56,7 +54,7 @@ export const useInterview = () => {
             setLoading(false)
         }
 
-        return response.interviewReports
+        return response?.interviewReports || []
     }
 
     const getResumePdf = async (interviewReportId) => {

@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: interview-ai-api
+    runtime: node
+    rootDir: Backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+
+  - type: static
+    name: interview-ai-web
+    rootDir: Frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

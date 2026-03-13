@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 
 const Login = () => {
 
-    const { loading, handleLogin } = useAuth()
+    const { loading, error, handleLogin } = useAuth()
     const navigate = useNavigate()
 
     const [ email, setEmail ] = useState("")
@@ -13,8 +13,11 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleLogin({email,password})
-        navigate('/')
+        const result = await handleLogin({email,password})
+
+        if (result?.user) {
+            navigate('/')
+        }
     }
 
     if(loading){
@@ -31,14 +34,19 @@ const Login = () => {
                         <label htmlFor="email">Email</label>
                         <input
                             onChange={(e) => { setEmail(e.target.value) }}
-                            type="email" id="email" name='email' placeholder='Enter email address' />
+                            value={email}
+                            type="text" id="email" name='email' placeholder='Enter email or username'
+                            required />
                     </div>
                     <div className="input-group">
                         <label htmlFor="password">Password</label>
                         <input
                             onChange={(e) => { setPassword(e.target.value) }}
-                            type="password" id="password" name='password' placeholder='Enter password' />
+                            value={password}
+                            type="password" id="password" name='password' placeholder='Enter password'
+                            required />
                     </div>
+                    {error && <p>{error}</p>}
                     <button className='button primary-button' >Login</button>
                 </form>
                 <p>Don't have an account? <Link to={"/register"} >Register</Link> </p>

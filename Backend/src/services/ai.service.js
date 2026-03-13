@@ -1,11 +1,26 @@
 const { GoogleGenAI } = require("@google/genai")
 const { z } = require("zod")
-const { zodToJsonSchema } = require("zod-to-json-schema")
 const puppeteer = require("puppeteer")
 
+const GEMINI_API_KEY = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash"
+
 const ai = new GoogleGenAI({
-    apiKey: process.env.GOOGLE_GENAI_API_KEY
+    apiKey: GEMINI_API_KEY
 })
+
+function ensureAiConfig() {
+    if (!GEMINI_API_KEY) {
+        throw new Error("Gemini API key is not configured.")
+    }
+}
+
+function getAiErrorMessage(error, fallbackMessage) {
+    return error?.message
+        || error?.error?.message
+        || error?.response?.data?.message
+        || fallbackMessage
+}
 
 
 const interviewReportSchema = z.object({
@@ -32,25 +47,63 @@ const interviewReportSchema = z.object({
     title: z.string().describe("The title of the job for which the interview report is generated"),
 })
 
+function extractJson(text) {
+    if (!text) {
+        throw new Error("Gemini returned an empty response.")
+    }
+
+    const cleanedText = text
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim()
+
+    return cleanedText
+}
+
+function normalizeInterviewReport(payload) {
+    const result = interviewReportSchema.safeParse(payload)
+
+    if (result.success) {
+        return result.data
+    }
+
+    throw new Error("Gemini returned an invalid interview report format.")
+}
+
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
+    ensureAiConfig()
 
 
     const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
                         Self Description: ${selfDescription}
                         Job Description: ${jobDescription}
+
+                        Return only valid JSON with this exact shape:
+                        {
+                          "matchScore": number,
+                          "technicalQuestions": [{"question": string, "intention": string, "answer": string}],
+                          "behavioralQuestions": [{"question": string, "intention": string, "answer": string}],
+                          "skillGaps": [{"skill": string, "severity": "low" | "medium" | "high"}],
+                          "preparationPlan": [{"day": number, "focus": string, "tasks": [string]}],
+                          "title": string
+                        }
 `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
-        }
-    })
+    try {
+        const response = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+            }
+        })
 
-    return JSON.parse(response.text)
+        return normalizeInterviewReport(JSON.parse(extractJson(response.text)))
+    } catch (error) {
+        throw new Error(getAiErrorMessage(error, "Failed to generate interview report with Gemini."))
+    }
 
 
 }
@@ -58,7 +111,9 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 
 async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch()
+    const browser = await puppeteer.launch({
+        args: [ "--no-sandbox", "--disable-setuid-sandbox" ]
+    })
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" })
 
@@ -77,6 +132,7 @@ async function generatePdfFromHtml(htmlContent) {
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
+    ensureAiConfig()
 
     const resumePdfSchema = z.object({
         html: z.string().describe("The HTML content of the resume which can be converted to PDF using any library like puppeteer")
@@ -93,23 +149,28 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         you can highlight the content using some colors or different font styles but the overall design should be simple and professional.
                         The content should be ATS friendly, i.e. it should be easily parsable by ATS systems without losing important information.
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
+                        Return only valid JSON with this exact shape:
+                        {
+                          "html": string
+                        }
                     `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(resumePdfSchema),
-        }
-    })
+    try {
+        const response = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+            }
+        })
 
+        const jsonContent = resumePdfSchema.parse(JSON.parse(extractJson(response.text)))
+        const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
 
-    const jsonContent = JSON.parse(response.text)
-
-    const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
-
-    return pdfBuffer
+        return pdfBuffer
+    } catch (error) {
+        throw new Error(getAiErrorMessage(error, "Failed to generate resume with Gemini."))
+    }
 
 }
 

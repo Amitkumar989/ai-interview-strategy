@@ -61,6 +61,7 @@ const Interview = () => {
     const [ activeNav, setActiveNav ] = useState('technical')
     const { report, getReportById, loading, getResumePdf } = useInterview()
     const { interviewId } = useParams()
+    const navigate = useNavigate()
 
     useEffect(() => {
         if (interviewId) {
@@ -90,6 +91,15 @@ const Interview = () => {
                 {/* ── Left Nav ── */}
                 <nav className='interview-nav'>
                     <div className="nav-content">
+                        <button
+                            className='interview-nav__home'
+                            onClick={() => navigate('/')}
+                        >
+                            <span className='interview-nav__icon'>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /></svg>
+                            </span>
+                            Back to Home
+                        </button>
                         <p className='interview-nav__label'>Sections</p>
                         {NAV_ITEMS.map(item => (
                             <button

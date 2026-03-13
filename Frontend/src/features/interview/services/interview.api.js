@@ -1,9 +1,17 @@
 import axios from "axios";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
+
 const api = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: API_BASE_URL,
     withCredentials: true,
 })
+
+function getApiErrorMessage(err, fallbackMessage) {
+    return err?.response?.data?.message
+        || err?.message
+        || fallbackMessage
+}
 
 
 /**
@@ -16,13 +24,13 @@ export const generateInterviewReport = async ({ jobDescription, selfDescription,
     formData.append("selfDescription", selfDescription)
     formData.append("resume", resumeFile)
 
-    const response = await api.post("/api/interview/", formData, {
-        headers: {
-            "Content-Type": "multipart/form-data"
-        }
-    })
+    try {
+        const response = await api.post("/api/interview/", formData)
 
-    return response.data
+        return response.data
+    } catch (err) {
+        throw new Error(getApiErrorMessage(err, "Failed to generate interview strategy"))
+    }
 
 }
 
@@ -31,9 +39,13 @@ export const generateInterviewReport = async ({ jobDescription, selfDescription,
  * @description Service to get interview report by interviewId.
  */
 export const getInterviewReportById = async (interviewId) => {
-    const response = await api.get(`/api/interview/report/${interviewId}`)
+    try {
+        const response = await api.get(`/api/interview/report/${interviewId}`)
 
-    return response.data
+        return response.data
+    } catch (err) {
+        throw new Error(getApiErrorMessage(err, "Failed to fetch interview report"))
+    }
 }
 
 
@@ -41,9 +53,13 @@ export const getInterviewReportById = async (interviewId) => {
  * @description Service to get all interview reports of logged in user.
  */
 export const getAllInterviewReports = async () => {
-    const response = await api.get("/api/interview/")
+    try {
+        const response = await api.get("/api/interview/")
 
-    return response.data
+        return response.data
+    } catch (err) {
+        throw new Error(getApiErrorMessage(err, "Failed to fetch interview reports"))
+    }
 }
 
 
@@ -51,9 +67,13 @@ export const getAllInterviewReports = async () => {
  * @description Service to generate resume pdf based on user self description, resume content and job description.
  */
 export const generateResumePdf = async ({ interviewReportId }) => {
-    const response = await api.post(`/api/interview/resume/pdf/${interviewReportId}`, null, {
-        responseType: "blob"
-    })
+    try {
+        const response = await api.post(`/api/interview/resume/pdf/${interviewReportId}`, null, {
+            responseType: "blob"
+        })
 
-    return response.data
+        return response.data
+    } catch (err) {
+        throw new Error(getApiErrorMessage(err, "Failed to generate resume PDF"))
+    }
 }

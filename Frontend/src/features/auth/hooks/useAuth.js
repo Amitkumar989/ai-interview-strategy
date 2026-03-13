@@ -7,16 +7,20 @@ import { login, register, logout, getMe } from "../services/auth.api";
 export const useAuth = () => {
 
     const context = useContext(AuthContext)
-    const { user, setUser, loading, setLoading } = context
+    const { user, setUser, loading, setLoading, error, setError } = context
 
 
     const handleLogin = async ({ email, password }) => {
         setLoading(true)
+        setError(null)
         try {
             const data = await login({ email, password })
             setUser(data.user)
+            return data
         } catch (err) {
-
+            setUser(null)
+            setError(err.message || "Login failed")
+            return null
         } finally {
             setLoading(false)
         }
@@ -24,11 +28,15 @@ export const useAuth = () => {
 
     const handleRegister = async ({ username, email, password }) => {
         setLoading(true)
+        setError(null)
         try {
             const data = await register({ username, email, password })
             setUser(data.user)
+            return data
         } catch (err) {
-
+            setUser(null)
+            setError(err.message || "Registration failed")
+            return null
         } finally {
             setLoading(false)
         }
@@ -36,11 +44,12 @@ export const useAuth = () => {
 
     const handleLogout = async () => {
         setLoading(true)
+        setError(null)
         try {
-            const data = await logout()
+            await logout()
             setUser(null)
         } catch (err) {
-
+            setError(err.message || "Logout failed")
         } finally {
             setLoading(false)
         }
@@ -53,7 +62,9 @@ export const useAuth = () => {
 
                 const data = await getMe()
                 setUser(data.user)
-            } catch (err) { } finally {
+            } catch (err) {
+                setUser(null)
+            } finally {
                 setLoading(false)
             }
         }
@@ -62,5 +73,5 @@ export const useAuth = () => {
 
     }, [])
 
-    return { user, loading, handleRegister, handleLogin, handleLogout }
+    return { user, loading, error, handleRegister, handleLogin, handleLogout }
 }

@@ -9,12 +9,14 @@ const Register = () => {
     const [ email, setEmail ] = useState("")
     const [ password, setPassword ] = useState("")
 
-    const {loading,handleRegister} = useAuth()
+    const {loading,error,handleRegister} = useAuth()
     
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleRegister({username,email,password})
-        navigate("/")
+        const result = await handleRegister({username,email,password})
+        if (result?.user) {
+            navigate("/")
+        }
     }
 
     if(loading){
@@ -32,20 +34,28 @@ const Register = () => {
                         <label htmlFor="username">Username</label>
                         <input
                             onChange={(e) => { setUsername(e.target.value) }}
-                            type="text" id="username" name='username' placeholder='Enter username' />
+                            value={username}
+                            type="text" id="username" name='username' placeholder='Enter username'
+                            required />
                     </div>
                     <div className="input-group">
                         <label htmlFor="email">Email</label>
                         <input
                             onChange={(e) => { setEmail(e.target.value) }}
-                            type="email" id="email" name='email' placeholder='Enter email address' />
+                            value={email}
+                            type="email" id="email" name='email' placeholder='Enter email address'
+                            required />
                     </div>
                     <div className="input-group">
                         <label htmlFor="password">Password</label>
                         <input
                             onChange={(e) => { setPassword(e.target.value) }}
-                            type="password" id="password" name='password' placeholder='Enter password' />
+                            value={password}
+                            type="password" id="password" name='password' placeholder='Enter password'
+                            required />
                     </div>
+
+                    {error && <p>{error}</p>}
 
                     <button className='button primary-button' >Register</button>
 
