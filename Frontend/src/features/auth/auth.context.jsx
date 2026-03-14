@@ -1,5 +1,6 @@
 import { createContext, useEffect, useState } from "react";
 import { getMe } from "./services/auth.api";
+import { clearAuthToken } from "./services/token.storage";
 
 
 export const AuthContext = createContext()
@@ -17,6 +18,7 @@ export const AuthProvider = ({ children }) => {
                 const data = await getMe()
                 setUser(data.user)
             } catch (err) {
+                clearAuthToken()
                 setUser(null)
             } finally {
                 setLoading(false)
